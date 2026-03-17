@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>¡El Juego de Roma! 🌟</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #FF6BB5;
+    --yellow: #FFD93D;
+    --cyan: #6BCBFF;
+    --green: #6BFF9E;
+    --purple: #C46BFF;
+    --orange: #FF9B45;
+    --bg: #1A0A2E;
+    --card: #2D1B55;
+    --white: #FFFFFF;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* Fondo con estrellas animadas */
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--d) ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    from { opacity: 0.1; transform: scale(0.8); }
+    to   { opacity: 1;   transform: scale(1.2); }
+  }
+
+  /* Burbujas flotantes de fondo */
+  .bubble {
+    position: fixed;
+    border-radius: 50%;
+    opacity: 0.08;
+    animation: floatBubble var(--d) ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes floatBubble {
+    from { transform: translateY(0) rotate(0deg); }
+    to   { transform: translateY(-40px) rotate(20deg); }
+  }
+
+  /* Contenedor principal */
+  .game-wrapper {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 640px;
+    padding: 20px;
+  }
+
+  /* Título */
+  .title {
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    color: var(--yellow);
+    text-shadow: 0 0 30px rgba(255,217,61,0.6), 4px 4px 0 rgba(255,107,181,0.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: titleBounce 2s ease-in-out infinite;
+  }
+  @keyframes titleBounce {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50% { transform: translateY(-8px) rotate(1deg); }
+  }
+
+  /* Barra de info superior */
+  .info-bar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    background: var(--card);
+    border: 3px solid var(--purple);
+    border-radius: 50px;
+    padding: 8px 20px;
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.2rem;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 20px rgba(196,107,255,0.3);
+  }
+  .badge span { color: var(--yellow); font-size: 1.4rem; }
+
+  /* Tarjeta de sílaba */
+  .syllable-card {
+    width: 680px;
+    height: 280px;
+    border-radius: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: default;
+    transition: transform 0.15s;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .syllable-card::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 44px;
+    background: linear-gradient(135deg, var(--pink), var(--cyan), var(--purple), var(--yellow));
+    z-index: -1;
+    animation: borderSpin 3s linear infinite;
+  }
+  @keyframes borderSpin {
+    from { filter: hue-rotate(0deg); }
+    to   { filter: hue-rotate(360deg); }
+  }
+
+  .syllable-text {
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-weight: 700;
+    font-size: clamp(5rem, 18vw, 9rem);
+    color: var(--white);
+    text-shadow: 4px 6px 0 rgba(0,0,0,0.3);
+    line-height: 1;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    transition: transform 0.3s, opacity 0.3s;
+    user-select: none;
+  }
+
+  /* Estados de la tarjeta */
+  .syllable-card.correct {
+    animation: correctPop 0.6s ease forwards;
+  }
+  .syllable-card.wrong {
+    animation: wrongShake 0.5s ease forwards;
+  }
+  @keyframes correctPop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.25) rotate(5deg); }
+    60% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+  @keyframes wrongShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-15px); }
+    40% { transform: translateX(15px); }
+    60% { transform: translateX(-10px); }
+    80% { transform: translateX(10px); }
+  }
+
+  /* Colores de fondo de la tarjeta por índice */
+  .card-bg-0 { background: linear-gradient(135deg, #2D1B55, #1e3a6e); }
+  .card-bg-1 { background: linear-gradient(135deg, #2D1B55, #6e1e3a); }
+  .card-bg-2 { background: linear-gradient(135deg, #2D1B55, #1e6e3a); }
+  .card-bg-3 { background: linear-gradient(135deg, #2D1B55, #6e4a1e); }
+  .card-bg-4 { background: linear-gradient(135deg, #2D1B55, #3a1e6e); }
+
+  /* Timer bar */
+  .timer-wrap {
+    width: 280px;
+    height: 18px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.15);
+  }
+  .timer-bar {
+    height: 100%;
+    border-radius: 20px;
+    background: linear-gradient(90deg, var(--green), var(--cyan), var(--yellow), var(--orange), var(--pink));
+    transition: width 0.3s linear, background 0.5s;
+    width: 100%;
+  }
+  .timer-bar.urgent {
+    background: linear-gradient(90deg, var(--pink), var(--orange));
+    animation: urgentPulse 0.4s ease-in-out infinite alternate;
+  }
+  @keyframes urgentPulse {
+    from { opacity: 1; }
+    to   { opacity: 0.5; }
+  }
+
+  /* Indicador de micrófono */
+  .mic-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--card);
+    border-radius: 50px;
+    padding: 10px 22px;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+  .mic-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #555;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .mic-dot.listening {
+    background: var(--green);
+    box-shadow: 0 0 12px var(--green);
+    animation: micPulse 0.8s ease-in-out infinite alternate;
+  }
+  .mic-dot.heard {
+    background: var(--yellow);
+    box-shadow: 0 0 12px var(--yellow);
+  }
+  @keyframes micPulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.4); }
+  }
+  .mic-text {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* Botón de inicio */
+  .btn-start {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.8rem;
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--yellow), var(--orange));
+    border: none;
+    border-radius: 50px;
+    padding: 18px 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(255,217,61,0.4), 0 4px 0 #b8800a;
+    transition: transform 0.1s, box-shadow 0.1s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .btn-start:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(255,217,61,0.5), 0 6px 0 #b8800a;
+  }
+  .btn-start:active {
+    transform: translateY(2px);
+    box-shadow: 0 4px 20px rgba(255,217,61,0.3), 0 2px 0 #b8800a;
+  }
+
+  /* Pantalla de inicio */
+  #screen-start { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  #screen-start p {
+    color: rgba(255,255,255,0.7);
+    font-size: 1.1rem;
+    max-width: 360px;
+    line-height: 1.6;
+  }
+  .rules-box {
+    background: var(--card);
+    border: 2px solid var(--purple);
+    border-radius: 20px;
+    padding: 16px 24px;
+    text-align: left;
+    max-width: 360px;
+    color: rgba(255,255,255,0.8);
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+  .rules-box b { color: var(--yellow); }
+
+  /* Pantalla de juego */
+  #screen-game { display: none; flex-direction: column; align-items: center; gap: 16px; }
+
+  /* Feedback overlay */
+  .feedback-emoji {
+    position: fixed;
+    pointer-events: none;
+    font-size: 4rem;
+    z-index: 100;
+    animation: flyUp 1s ease forwards;
+  }
+  @keyframes flyUp {
+    from { transform: translateY(0) scale(0.5); opacity: 1; }
+    to   { transform: translateY(-150px) scale(1.2); opacity: 0; }
+  }
+
+  /* Pantalla de resultados */
+  #screen-result {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    text-align: center;
+  }
+  .result-stars {
+    font-size: 4rem;
+    letter-spacing: 10px;
+    animation: starPop 0.6s ease forwards;
+    filter: drop-shadow(0 0 15px gold);
+  }
+  @keyframes starPop {
+    0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+    70% { transform: scale(1.3) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .result-title {
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    color: var(--yellow);
+    text-shadow: 3px 3px 0 var(--pink);
+    animation: titleBounce 1.5s ease-in-out infinite;
+  }
+  .result-score {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.5rem;
+    color: var(--white);
+    background: var(--card);
+    border: 3px solid var(--cyan);
+    border-radius: 20px;
+    padding: 12px 30px;
+  }
+  .result-score b { color: var(--green); font-size: 2rem; }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    max-width: 380px;
+  }
+  .result-item {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 12px 8px;
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    text-align: center;
+    border: 2px solid transparent;
+    position: relative;
+  }
+  .result-item.ok  { border-color: var(--green); color: var(--green); }
+  .result-item.fail { border-color: var(--pink); color: var(--pink); opacity: 0.7; }
+  .result-item .result-icon {
+    font-size: 0.85rem;
+    position: absolute;
+    top: -8px; right: -8px;
+  }
+
+  /* Confeti */
+  .confetti-piece {
+    position: fixed;
+    width: 12px; height: 12px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 200;
+    animation: confettiFall var(--d) var(--delay) ease-in forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Texto "escuché" */
+  .heard-text {
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--cyan);
+    min-height: 1.8rem;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px var(--cyan);
+    transition: opacity 0.3s;
+  }
+
+  /* Progress dots */
+  .progress-dots {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 320px;
+  }
+  .dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .dot.done-ok   { background: var(--green); border-color: var(--green); transform: scale(1.2); }
+  .dot.done-fail { background: var(--pink);  border-color: var(--pink); }
+  .dot.current   { background: var(--yellow); border-color: var(--yellow); animation: dotPulse 0.6s ease-in-out infinite alternate; }
+  @keyframes dotPulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.4); }
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Estrellas fondo -->
+<div class="stars" id="stars"></div>
+
+<!-- Burbujas fondo -->
+<div id="bubbles"></div>
+
+<div class="game-wrapper">
+
+  <!-- PANTALLA INICIO -->
+  <div id="screen-start">
+    <div class="title">⭐ ¡Juego de Roma! ⭐</div>
+    <div class="rules-box">
+      🎤 <b>Cómo jugar:</b><br>
+      1. Aparece una sílaba en pantalla<br>
+      2. ¡Dila en voz alta!<br>
+      3. Tienes <b>5 segundos</b> por sílaba<br>
+      4. Gana una ⭐ por cada una correcta<br>
+      5. ¡A ver cuántas puedes decir!
+    </div>
+    <button class="btn-start" onclick="startGame()">🚀 ¡Jugar!</button>
+  </div>
+
+  <!-- PANTALLA JUEGO -->
+  <div id="screen-game">
+    <div class="info-bar">
+      <div class="badge">⭐ <span id="score">0</span></div>
+      <div class="badge">📚 <span id="current-num">1</span> / <span id="total-num">20</span></div>
+    </div>
+
+    <div class="progress-dots" id="progress-dots"></div>
+
+    <div class="syllable-card card-bg-0" id="syllable-card">
+      <div class="syllable-text" id="syllable-display">pa</div>
+    </div>
+
+    <div class="timer-wrap">
+      <div class="timer-bar" id="timer-bar"></div>
+    </div>
+
+    <div class="heard-text" id="heard-text"></div>
+
+    <div class="mic-status">
+      <div class="mic-dot" id="mic-dot"></div>
+      <div class="mic-text" id="mic-text">Iniciando micrófono...</div>
+    </div>
+  </div>
+
+  <!-- PANTALLA RESULTADO -->
+  <div id="screen-result">
+    <div class="result-stars" id="result-stars">⭐⭐⭐</div>
+    <div class="result-title" id="result-title">¡Increíble, Roma!</div>
+    <div class="result-score">Acertaste <b id="final-score">0</b> de <span id="final-total">20</span> sílabas</div>
+    <div class="result-grid" id="result-grid"></div>
+    <button class="btn-start" onclick="restartGame()">🔄 ¡Otra vez!</button>
+  </div>
+
+</div>
+
+<script>
+// ========================
+// DATOS
+// ========================
+const SYLLABLES_POOL = [
+  // Animales (2-3 silabas)
+  'gato', 'perro', 'pato', 'vaca', 'toro', 'rata', 'mono', 'loro', 'sapo', 'tigre',
+  'oveja', 'conejo', 'paloma', 'jirafa', 'caballo', 'gallina', 'abeja', 'araña', 'canguro', 'delfin',
+
+  // Familia y personas (2-3 silabas)
+  'papa', 'mama', 'hijo', 'hija', 'primo', 'prima', 'nene', 'nena', 'abuelo', 'abuela',
+  'hermano', 'hermana', 'amigo', 'amiga', 'vecino', 'vecina', 'sobrino', 'sobrina', 'maestro', 'maestra',
+
+  // Casa y escuela (2-3 silabas)
+  'casa', 'puerta', 'ventana', 'techo', 'pared', 'mesa', 'silla', 'cama', 'patio', 'bano',
+  'cocina', 'ropero', 'espejo', 'cortina', 'alfombra', 'lampara', 'cuaderno', 'lapiz', 'borrador', 'tijera',
+
+  // Comida (2-3 silabas)
+  'queso', 'leche', 'huevo', 'carne', 'pollo', 'arroz', 'papa', 'tomate', 'banana', 'manzana',
+  'naranja', 'melon', 'sandia', 'fideo', 'yogur', 'cereza', 'durazno', 'limon', 'galleta', 'frutilla',
+
+  // Cuerpo (2-3 silabas)
+  'cabeza', 'nariz', 'boca', 'oreja', 'mano', 'brazo', 'dedo', 'pierna', 'cuello', 'barriga',
+  'codo', 'diente', 'lengua', 'talon', 'rodilla', 'espalda', 'mejilla', 'pestana', 'muneca', 'garganta',
+
+  // Acciones (2-3 silabas)
+  'correr', 'saltar', 'bailar', 'cantar', 'mirar', 'jugar', 'tocar', 'pintar', 'pegar', 'lavar',
+  'comer', 'tomar', 'abrir', 'cerrar', 'subir', 'bajar', 'limpiar', 'ordenar', 'recortar', 'dibujar',
+
+  // Objetos y lugares (2-3 silabas)
+  'pelota', 'muneca', 'carrito', 'patines', 'mochila', 'camisa', 'zapato', 'media', 'gorra', 'bufanda',
+  'escuela', 'plaza', 'parque', 'camino', 'castillo', 'pirata', 'tesoro', 'bandera', 'princesa', 'planeta',
+
+  // Colores y adjetivos (2-3 silabas)
+  'rojo', 'verde', 'morado', 'celeste', 'naranja', 'blanco', 'negro', 'bonito', 'grande', 'suave',
+  'fuerte', 'alegre', 'triste', 'lento', 'rapido', 'limpio', 'sucio', 'pequeno', 'mediano', 'gigante',
+];
+
+const TOTAL_ROUNDS = 20;
+const TIME_PER_SYLLABLE = 20; // segundos
+
+// ========================
+// ESTADO
+// ========================
+let currentIndex = 0;
+let score = 0;
+let syllables = [];
+let results = []; // {syllable, ok}
+let timerInterval = null;
+let timeLeft = TIME_PER_SYLLABLE;
+let recognition = null;
+let gameActive = false;
+let roundResolved = false;
+let roundToken = 0;
+
+// ========================
+// FONDO ANIMADO
+// ========================
+function buildBackground() {
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 3 + 1;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      --d:${(Math.random()*3+1).toFixed(1)}s;
+      animation-delay:${(Math.random()*3).toFixed(1)}s;
+    `;
+    starsEl.appendChild(s);
+  }
+  const bubblesEl = document.getElementById('bubbles');
+  const colors = ['#FF6BB5','#FFD93D','#6BCBFF','#C46BFF','#6BFF9E','#FF9B45'];
+  for (let i = 0; i < 8; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = Math.random() * 200 + 100;
+    b.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      background:${colors[i % colors.length]};
+      --d:${(Math.random()*6+4).toFixed(1)}s;
+    `;
+    bubblesEl.appendChild(b);
+  }
+}
+
+// ========================
+// UTILIDADES
+// ========================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showScreen(name) {
+  ['start','game','result'].forEach(s => {
+    const el = document.getElementById(`screen-${s}`);
+    el.style.display = (s === name) ? 'flex' : 'none';
+  });
+}
+
+// ========================
+// SPEECH SYNTHESIS — eliminada: Roma debe leer, no repetir
+// ========================
+
+// ========================
+// RECONOCIMIENTO DE VOZ
+// ========================
+function setupRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById('mic-text').textContent = '⚠️ Tu navegador no soporta voz';
+    return null;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = 'es-MX';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 5;
+
+  rec.onstart = () => {
+    setMicStatus('listening', '🎤 Escuchando...');
+  };
+
+  rec.onresult = (event) => {
+    let interim = '';
+    let final = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript.trim().toLowerCase();
+      if (event.results[i].isFinal) final = t;
+      else interim = t;
+    }
+    const heard = (final || interim).toLowerCase().trim();
+    if (heard) {
+      setMicStatus('heard', `🔊 Escuché: "${heard}"`);
+      document.getElementById('heard-text').textContent = `"${heard}"`;
+      checkAnswer(heard);
+    }
+  };
+
+  rec.onerror = (e) => {
+    if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      setMicStatus('idle', '🎤 Toca para escuchar');
+    }
+  };
+
+  rec.onend = () => {
+    if (gameActive) {
+      setTimeout(() => {
+        if (gameActive) {
+          try { rec.start(); } catch(e) {}
+        }
+      }, 200);
+    }
+  };
+
+  return rec;
+}
+
+function setMicStatus(state, text) {
+  const dot = document.getElementById('mic-dot');
+  const txt = document.getElementById('mic-text');
+  dot.className = 'mic-dot' + (state !== 'idle' ? ' ' + state : '');
+  txt.textContent = text;
+}
+
+// ========================
+// LÓGICA DEL JUEGO
+// ========================
+function startGame() {
+  syllables = shuffle(SYLLABLES_POOL).slice(0, TOTAL_ROUNDS);
+  currentIndex = 0;
+  score = 0;
+  results = [];
+  gameActive = true;
+
+  buildProgressDots();
+  showScreen('game');
+
+  document.getElementById('total-num').textContent = TOTAL_ROUNDS;
+  document.getElementById('score').textContent = '0';
+
+  recognition = setupRecognition();
+  if (recognition) {
+    try { recognition.start(); } catch(e) {}
+  }
+
+  showSyllable();
+}
+
+function buildProgressDots() {
+  const el = document.getElementById('progress-dots');
+  el.innerHTML = '';
+  for (let i = 0; i < TOTAL_ROUNDS; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' current' : '');
+    d.id = `dot-${i}`;
+    el.appendChild(d);
+  }
+}
+
+function updateDot(index, state) {
+  const d = document.getElementById(`dot-${index}`);
+  if (!d) return;
+  d.className = 'dot ' + state;
+}
+
+function showSyllable() {
+  if (currentIndex >= TOTAL_ROUNDS) { endGame(); return; }
+
+  roundResolved = false;
+  roundToken++;
+
+  const syl = syllables[currentIndex];
+  document.getElementById('syllable-display').textContent = syl;
+  document.getElementById('current-num').textContent = currentIndex + 1;
+  document.getElementById('heard-text').textContent = '';
+  setMicStatus('listening', '🎤 Escuchando...');
+
+  // Color de tarjeta cíclico
+  const card = document.getElementById('syllable-card');
+  card.className = `syllable-card card-bg-${currentIndex % 5}`;
+
+  // Animación de entrada
+  const txt = document.getElementById('syllable-display');
+  txt.style.transform = 'scale(0) rotate(-10deg)';
+  txt.style.opacity = '0';
+  setTimeout(() => {
+    txt.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s';
+    txt.style.transform = 'scale(1) rotate(0deg)';
+    txt.style.opacity = '1';
+  }, 50);
+
+  // Actualizar dot
+  updateDot(currentIndex, 'current');
+
+  // Timer
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = TIME_PER_SYLLABLE;
+  const bar = document.getElementById('timer-bar');
+  bar.style.width = '100%';
+  bar.className = 'timer-bar';
+
+  timerInterval = setInterval(() => {
+    timeLeft -= 0.1;
+    const pct = Math.max(0, (timeLeft / TIME_PER_SYLLABLE) * 100);
+    bar.style.width = pct + '%';
+
+    if (pct < 30) bar.classList.add('urgent');
+
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      handleResult(false, 'timeout');
+    }
+  }, 100);
+}
+
+function checkAnswer(heard) {
+  if (!gameActive || roundResolved || currentIndex >= TOTAL_ROUNDS) return;
+
+  const target = syllables[currentIndex].toLowerCase();
+
+  // Normalizar: quitar tildes y limpiar
+  const normalize = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+  const heardNorm = normalize(heard);
+  const targetNorm = normalize(target);
+
+  // Verificar si la sílaba está en lo escuchado
+  if (heardNorm === targetNorm || heardNorm.includes(targetNorm) || heardNorm.startsWith(targetNorm)) {
+    handleResult(true);
+  }
+}
+
+function handleResult(correct, reason) {
+  if (!gameActive || roundResolved || currentIndex >= TOTAL_ROUNDS) return;
+  roundResolved = true;
+  const thisRoundToken = roundToken;
+
+  clearInterval(timerInterval);
+
+  const syl = syllables[currentIndex];
+  results.push({ syllable: syl, ok: correct });
+
+  const card = document.getElementById('syllable-card');
+
+  if (correct) {
+    score++;
+    document.getElementById('score').textContent = score;
+    card.classList.add('correct');
+    updateDot(currentIndex, 'done-ok');
+    launchEmoji(['⭐','🌟','✨','🎉','👏','💫'][Math.floor(Math.random()*6)]);
+    if (score % 5 === 0 && score > 0) launchConfetti();
+  } else {
+    card.classList.add('wrong');
+    updateDot(currentIndex, 'done-fail');
+    launchEmoji(['😅','💪','🔄','👀'][Math.floor(Math.random()*4)]);
+  }
+
+  setTimeout(() => {
+    if (!gameActive || thisRoundToken !== roundToken) return;
+
+    card.classList.remove('correct','wrong');
+    currentIndex++;
+    if (currentIndex < TOTAL_ROUNDS) showSyllable();
+    else endGame();
+  }, 700);
+}
+
+function launchEmoji(emoji) {
+  const el = document.createElement('div');
+  el.className = 'feedback-emoji';
+  el.textContent = emoji;
+  el.style.left = (Math.random() * 60 + 20) + '%';
+  el.style.top = '40%';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function launchConfetti() {
+  const colors = ['#FF6BB5','#FFD93D','#6BCBFF','#C46BFF','#6BFF9E','#FF9B45'];
+  for (let i = 0; i < 40; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `
+      left: ${Math.random()*100}%;
+      background: ${colors[Math.floor(Math.random()*colors.length)]};
+      --d: ${(Math.random()*2+1).toFixed(1)}s;
+      --delay: ${(Math.random()*0.5).toFixed(2)}s;
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+}
+
+// ========================
+// FIN DE JUEGO
+// ========================
+function endGame() {
+  gameActive = false;
+  if (recognition) {
+    try { recognition.stop(); recognition.abort(); } catch(e) {}
+    recognition = null;
+  }
+  clearInterval(timerInterval);
+
+  const pct = score / TOTAL_ROUNDS;
+  let stars, title;
+
+  if (pct === 1) {
+    stars = '⭐⭐⭐⭐⭐'; title = '¡Perfecta, Roma! 🏆';
+    launchConfetti(); setTimeout(launchConfetti, 600); setTimeout(launchConfetti, 1200);
+  } else if (pct >= 0.8) {
+    stars = '⭐⭐⭐⭐'; title = '¡Qué bien lo hiciste! 🎉';
+    launchConfetti();
+  } else if (pct >= 0.6) {
+    stars = '⭐⭐⭐'; title = '¡Muy bien, sigue así! 💪';
+  } else if (pct >= 0.4) {
+    stars = '⭐⭐'; title = '¡Vas mejorando! 😊';
+  } else {
+    stars = '⭐'; title = '¡La próxima vez más! 🌈';
+  }
+
+  document.getElementById('result-stars').textContent = stars;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('final-score').textContent = score;
+  document.getElementById('final-total').textContent = TOTAL_ROUNDS;
+
+  // Grid de resultados
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+  results.forEach(r => {
+    const el = document.createElement('div');
+    el.className = `result-item ${r.ok ? 'ok' : 'fail'}`;
+    el.textContent = r.syllable;
+    const icon = document.createElement('span');
+    icon.className = 'result-icon';
+    icon.textContent = r.ok ? '✅' : '❌';
+    el.appendChild(icon);
+    grid.appendChild(el);
+  });
+
+  showScreen('result');
+}
+
+function restartGame() {
+  startGame();
+}
+
+// ========================
+// INIT
+// ========================
+buildBackground();
+showScreen('start');
+
+// Pedir permiso del micrófono al cargar la página
+(async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Permiso concedido — cerramos el stream, el juego lo abrirá cuando empiece
+    stream.getTracks().forEach(t => t.stop());
+    document.getElementById('mic-text').textContent = '🎤 Micrófono listo';
+  } catch (e) {
+    document.getElementById('mic-text').textContent = '⚠️ Sin acceso al micrófono';
+  }
+})();
+</script>
+</body>
+</html>
