@@ -6,12 +6,18 @@
 <title>¡El Juego de Roma! 🌟</title>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js"
+  }
+}
+</script>
 </head>
 <body>
 
-<!-- Fondo -->
-<div class="stars" id="stars"></div>
-<div id="bubbles"></div>
+<!-- 3D Canvas -->
+<canvas id="bg3d"></canvas>
 
 <div class="game-wrapper">
 
@@ -22,7 +28,7 @@
       🎤 <b>Cómo jugar:</b><br>
       1. Aparece una sílaba en pantalla<br>
       2. ¡Dila en voz alta!<br>
-      3. Tienes <b>5 segundos</b> por sílaba<br>
+      3. Tienes <b>30 segundos</b> por sílaba<br>
       4. Gana una ⭐ por cada una correcta<br>
       5. ¡A ver cuántas puedes decir!
     </div>
@@ -65,11 +71,13 @@
 
 </div>
 
+<!-- Regular scripts (globals) -->
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
 <script src="js/ui.js"></script>
-<script src="js/effects.js"></script>
 <script src="js/voice.js"></script>
-<script src="js/game.js"></script>
+
+<!-- ES Module (Three.js + engine + game) -->
+<script type="module" src="js/game.js"></script>
 </body>
 </html>

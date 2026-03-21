@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>¡English de Roma! 🇬🇧</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js"
+  }
+}
+</script>
+<style>
+  .syllable-text { text-transform: none !important; letter-spacing: 8px !important; }
+</style>
+</head>
+<body>
+
+<canvas id="bg3d"></canvas>
+
+<div class="game-wrapper">
+
+  <div id="screen-start">
+    <div class="title">🇬🇧 ¡English de Roma! 🇬🇧</div>
+    <div class="rules-box">
+      🎤 <b>How to play:</b><br>
+      1. Aparece una palabra en inglés<br>
+      2. ¡Dila en voz alta!<br>
+      3. Tienes <b>30 segundos</b> por palabra<br>
+      4. Gana un 💖 por cada una correcta<br>
+      5. ¡A ver cuántas sabes!
+    </div>
+    <button class="btn-start" onclick="startGame()">🚀 ¡Jugar!</button>
+  </div>
+
+  <div id="screen-game">
+    <div class="info-bar">
+      <div class="badge">💖 <span id="score">0</span></div>
+      <div class="badge">📚 <span id="current-num">1</span> / <span id="total-num">20</span></div>
+    </div>
+
+    <div class="progress-dots" id="progress-dots"></div>
+
+    <div class="syllable-card card-bg-0" id="syllable-card">
+      <div class="syllable-text" id="syllable-display">Cat</div>
+    </div>
+
+    <div class="timer-wrap">
+      <div class="timer-bar" id="timer-bar"></div>
+    </div>
+
+    <div class="heard-text" id="heard-text"></div>
+
+    <div class="mic-status">
+      <div class="mic-dot" id="mic-dot"></div>
+      <div class="mic-text" id="mic-text">Iniciando micrófono...</div>
+    </div>
+  </div>
+
+  <div id="screen-result">
+    <div class="result-stars" id="result-stars">💖💖💖</div>
+    <div class="result-title" id="result-title">¡Increíble, Roma!</div>
+    <div class="result-score">Dijiste <b id="final-score">0</b> de <span id="final-total">20</span> palabras</div>
+    <div class="result-grid" id="result-grid"></div>
+    <button class="btn-start" onclick="restartGame()">🔄 ¡Otra vez!</button>
+  </div>
+
+</div>
+
+<script src="js/ui.js"></script>
+
+<script type="module">
+import { renderer, scene, camera, clock } from './js/engine.js';
+import { updateSpace, screenToWorld, dim } from './js/space.js';
+import { spawnBurst, spawnConfetti3D, updateParticles } from './js/particles.js';
+
+// --- Render loop ---
+let lastTime = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  const dt = Math.min(t - lastTime, 0.05);
+  lastTime = t;
+  updateSpace(t, dt);
+  updateParticles(dt);
+  renderer.render(scene, camera);
+}
+animate();
+
+// --- Config ---
+const TOTAL_ROUNDS = 20;
+const TIME_PER_WORD = 30;
+
+// Very simple English words for a 6-year-old Spanish speaker
+// First English textbook vocabulary
+const WORDS_POOL = [
+  // Colors
+  'red', 'blue', 'green', 'yellow', 'pink', 'black', 'white',
+  // Animals
+  'cat', 'dog', 'fish', 'bird', 'cow', 'pig', 'duck', 'hen',
+  // Objects
+  'book', 'pen', 'ball', 'door', 'house', 'sun', 'moon', 'star', 'box', 'cup',
+  // Body
+  'hand', 'eye', 'nose', 'mouth', 'head',
+  // Family
+  'mom', 'dad', 'boy', 'girl', 'baby',
+  // Food
+  'milk', 'egg', 'cake', 'apple', 'corn',
+  // Actions
+  'run', 'eat', 'jump', 'sit', 'read',
+  // More
+  'tree', 'hat', 'shoe', 'sock', 'bed', 'bus', 'car', 'map', 'kite',
+];
+
+// Spanish-speaking child may say English words with Spanish phonetics
+// Accept common mispronunciations the speech API might hear
+const ALTERNATES = {
+  'red': ['red', 'ret'],
+  'blue': ['blue', 'blu', 'bleu', 'bru'],
+  'green': ['green', 'grin', 'grin'],
+  'yellow': ['yellow', 'yelo', 'yelow'],
+  'pink': ['pink', 'pin'],
+  'black': ['black', 'blak', 'blec'],
+  'white': ['white', 'wai', 'guait', 'huait'],
+  'cat': ['cat', 'ca', 'ket'],
+  'dog': ['dog', 'dok', 'dag'],
+  'fish': ['fish', 'fis', 'fich'],
+  'bird': ['bird', 'ber', 'bord'],
+  'cow': ['cow', 'cau', 'kau'],
+  'pig': ['pig', 'pik'],
+  'duck': ['duck', 'dak', 'duc'],
+  'hen': ['hen', 'jen'],
+  'book': ['book', 'buk', 'buc'],
+  'pen': ['pen'],
+  'ball': ['ball', 'bol', 'bau'],
+  'door': ['door', 'dor'],
+  'house': ['house', 'jaus', 'jous', 'haus'],
+  'sun': ['sun', 'san', 'son'],
+  'moon': ['moon', 'mun'],
+  'star': ['star', 'estar', 'tar'],
+  'box': ['box', 'boks', 'bok'],
+  'cup': ['cup', 'cap', 'cop'],
+  'hand': ['hand', 'jan', 'jand'],
+  'eye': ['eye', 'ai', 'ay'],
+  'nose': ['nose', 'nos', 'nous'],
+  'mouth': ['mouth', 'maus', 'maut'],
+  'head': ['head', 'jed', 'jed'],
+  'mom': ['mom', 'mam', 'ma'],
+  'dad': ['dad', 'da'],
+  'boy': ['boy', 'boi', 'boi'],
+  'girl': ['girl', 'gorl', 'gol'],
+  'baby': ['baby', 'beibi', 'bebi'],
+  'milk': ['milk', 'mi', 'mil'],
+  'egg': ['egg', 'eg', 'eig'],
+  'cake': ['cake', 'keik', 'kek'],
+  'apple': ['apple', 'apol', 'epol'],
+  'corn': ['corn', 'korn', 'con'],
+  'run': ['run', 'ran', 'ron'],
+  'eat': ['eat', 'it', 'i'],
+  'jump': ['jump', 'yamp', 'yomp'],
+  'sit': ['sit', 'si'],
+  'read': ['read', 'rid', 'ri'],
+  'tree': ['tree', 'tri', 'chri'],
+  'hat': ['hat', 'jat', 'jat'],
+  'shoe': ['shoe', 'shu', 'chu'],
+  'sock': ['sock', 'sok', 'sac'],
+  'bed': ['bed', 'bed'],
+  'bus': ['bus', 'bas', 'bos'],
+  'car': ['car', 'kar'],
+  'map': ['map'],
+  'kite': ['kite', 'kai', 'kait'],
+};
+
+// --- State ---
+var words = [];
+var currentIndex = 0;
+var score = 0;
+var results = [];
+var timerInterval = null;
+var timeLeft = TIME_PER_WORD;
+var recognition = null;
+var gameActive = false;
+var roundResolved = false;
+var roundToken = 0;
+
+// --- Helpers ---
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function normalize(s) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+// --- Voice ---
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('mic-text').textContent = '⚠️ Tu navegador no soporta voz';
+    return null;
+  }
+  const rec = new SR();
+  rec.lang = 'es-MX';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 5;
+
+  rec.onstart = () => setMicStatus('listening', '🎤 Escuchando...');
+
+  rec.onresult = (event) => {
+    let final = '', interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript.trim().toLowerCase();
+      if (event.results[i].isFinal) final = t;
+      else interim = t;
+    }
+    const heard = (final || interim).toLowerCase().trim();
+    if (heard) {
+      setMicStatus('heard', `🔊 Escuché: "${heard}"`);
+      document.getElementById('heard-text').textContent = `"${heard}"`;
+      checkAnswer(heard);
+    }
+  };
+
+  rec.onerror = (e) => {
+    if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      setMicStatus('idle', '🎤 Toca para escuchar');
+    }
+  };
+
+  rec.onend = () => {
+    if (gameActive) {
+      setTimeout(() => {
+        if (gameActive) try { rec.start(); } catch(e) {}
+      }, 200);
+    }
+  };
+
+  return rec;
+}
+
+// --- Answer matching ---
+function matchesAnswer(heard, target) {
+  const h = normalize(heard);
+  const t = normalize(target);
+  if (h === t || h.includes(t) || h.startsWith(t)) return true;
+  const alts = ALTERNATES[target] || [];
+  return alts.some(alt => h === normalize(alt) || h.includes(normalize(alt)));
+}
+
+// --- Game logic ---
+function startGame() {
+  words = shuffle([...WORDS_POOL]).slice(0, TOTAL_ROUNDS);
+  currentIndex = 0;
+  score = 0;
+  results = [];
+  gameActive = true;
+
+  buildProgressDots();
+  showScreen('game');
+  document.getElementById('total-num').textContent = TOTAL_ROUNDS;
+  document.getElementById('score').textContent = '0';
+
+  recognition = setupRecognition();
+  if (recognition) try { recognition.start(); } catch(e) {}
+
+  showNext();
+}
+
+function showNext() {
+  if (currentIndex >= TOTAL_ROUNDS) { endGame(); return; }
+
+  roundResolved = false;
+  roundToken++;
+
+  const word = words[currentIndex];
+  document.getElementById('syllable-display').textContent = capitalize(word);
+  document.getElementById('current-num').textContent = currentIndex + 1;
+  document.getElementById('heard-text').textContent = '';
+  setMicStatus('listening', '🎤 Escuchando...');
+
+  const card = document.getElementById('syllable-card');
+  card.className = `syllable-card card-bg-${currentIndex % 5}`;
+
+  const txt = document.getElementById('syllable-display');
+  txt.style.transform = 'scale(0) rotate(-10deg)';
+  txt.style.opacity = '0';
+  setTimeout(() => {
+    txt.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s';
+    txt.style.transform = 'scale(1) rotate(0deg)';
+    txt.style.opacity = '1';
+  }, 50);
+
+  updateDot(currentIndex, 'current');
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = TIME_PER_WORD;
+  const bar = document.getElementById('timer-bar');
+  bar.style.width = '100%';
+  bar.className = 'timer-bar';
+
+  timerInterval = setInterval(() => {
+    timeLeft -= 0.1;
+    const pct = Math.max(0, (timeLeft / TIME_PER_WORD) * 100);
+    bar.style.width = pct + '%';
+    if (pct < 30) bar.classList.add('urgent');
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      handleResult(false, 'timeout');
+    }
+  }, 100);
+}
+
+function checkAnswer(heard) {
+  if (!gameActive || roundResolved || currentIndex >= TOTAL_ROUNDS) return;
+  if (matchesAnswer(heard, words[currentIndex])) {
+    handleResult(true);
+  }
+}
+
+function handleResult(correct, reason) {
+  if (!gameActive || roundResolved || currentIndex >= TOTAL_ROUNDS) return;
+  roundResolved = true;
+  const thisToken = roundToken;
+  clearInterval(timerInterval);
+
+  const word = words[currentIndex];
+  results.push({ syllable: capitalize(word), ok: correct });
+
+  const card = document.getElementById('syllable-card');
+  const rect = card.getBoundingClientRect();
+  const origin = screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+
+  if (correct) {
+    score++;
+    document.getElementById('score').textContent = score;
+    card.classList.add('correct');
+    updateDot(currentIndex, 'done-ok');
+    launchEmoji(['💖','💗','💕','✨','🎉','💫'][Math.floor(Math.random()*6)]);
+    spawnBurst(origin);
+    if (score % 5 === 0 && score > 0) spawnConfetti3D(origin);
+  } else {
+    card.classList.add('wrong');
+    updateDot(currentIndex, 'done-fail');
+    launchEmoji(['😅','💪','🔄','👀'][Math.floor(Math.random()*4)]);
+    dim(500);
+  }
+
+  setTimeout(() => {
+    if (!gameActive || thisToken !== roundToken) return;
+    card.classList.remove('correct','wrong');
+    currentIndex++;
+    if (currentIndex < TOTAL_ROUNDS) showNext();
+    else endGame();
+  }, 700);
+}
+
+function endGame() {
+  gameActive = false;
+  if (recognition) {
+    try { recognition.stop(); recognition.abort(); } catch(e) {}
+    recognition = null;
+  }
+  clearInterval(timerInterval);
+
+  const pct = score / TOTAL_ROUNDS;
+  let stars, title;
+
+  if (pct === 1) {
+    stars = '💖💖💖💖💖'; title = '¡Perfecta, Roma! 🏆';
+    launchConfetti(); setTimeout(launchConfetti, 600); setTimeout(launchConfetti, 1200);
+    const c = screenToWorld(innerWidth / 2, innerHeight / 2);
+    spawnConfetti3D(c); setTimeout(() => spawnConfetti3D(c), 600);
+  } else if (pct >= 0.8) {
+    stars = '💖💖💖💖'; title = '¡Qué bien lo hiciste! 🎉';
+    launchConfetti();
+    spawnConfetti3D(screenToWorld(innerWidth / 2, innerHeight / 2));
+  } else if (pct >= 0.6) {
+    stars = '💖💖💖'; title = '¡Muy bien, sigue así! 💪';
+  } else if (pct >= 0.4) {
+    stars = '💖💖'; title = '¡Vas mejorando! 😊';
+  } else {
+    stars = '💖'; title = '¡La próxima vez más! 🌈';
+  }
+
+  document.getElementById('result-stars').textContent = stars;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('final-score').textContent = score;
+  document.getElementById('final-total').textContent = TOTAL_ROUNDS;
+
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+  results.forEach(r => {
+    const el = document.createElement('div');
+    el.className = `result-item ${r.ok ? 'ok' : 'fail'}`;
+    el.textContent = r.syllable;
+    const icon = document.createElement('span');
+    icon.className = 'result-icon';
+    icon.textContent = r.ok ? '✅' : '❌';
+    el.appendChild(icon);
+    grid.appendChild(el);
+  });
+
+  showScreen('result');
+}
+
+function restartGame() { startGame(); }
+window.startGame = startGame;
+window.restartGame = restartGame;
+
+// --- Init ---
+showScreen('start');
+(async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+    document.getElementById('mic-text').textContent = '🎤 Micrófono listo';
+  } catch (e) {
+    document.getElementById('mic-text').textContent = '⚠️ Sin acceso al micrófono';
+  }
+})();
+</script>
+</body>
+</html>

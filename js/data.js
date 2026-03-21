@@ -63,4 +63,4 @@ const SYLLABLES_POOL = [
 ];
 
 const TOTAL_ROUNDS = 20;
-const TIME_PER_SYLLABLE = 35;
+const TIME_PER_SYLLABLE = 30;

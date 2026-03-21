@@ -1,3 +1,21 @@
+import { renderer, scene, camera, clock } from './engine.js';
+import { updateSpace, screenToWorld, dim } from './space.js';
+import { spawnBurst, spawnConfetti3D, updateParticles } from './particles.js';
+
+// --- Render loop ---
+let lastTime = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  const dt = Math.min(t - lastTime, 0.05);
+  lastTime = t;
+  updateSpace(t, dt);
+  updateParticles(dt);
+  renderer.render(scene, camera);
+}
+animate();
+
+// --- Game logic ---
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -7,7 +25,7 @@ function shuffle(arr) {
   return a;
 }
 
-function startGame() {
+export function startGame() {
   syllables = shuffle(SYLLABLES_POOL).slice(0, TOTAL_ROUNDS);
   currentIndex = 0;
   score = 0;
@@ -91,6 +109,7 @@ function checkAnswer(heard) {
     handleResult(true);
   }
 }
+window.checkAnswer = checkAnswer;
 
 function handleResult(correct, reason) {
   if (!gameActive || roundResolved || currentIndex >= TOTAL_ROUNDS) return;
@@ -104,17 +123,26 @@ function handleResult(correct, reason) {
 
   const card = document.getElementById('syllable-card');
 
+  // 3D particle origin from card center
+  const rect = card.getBoundingClientRect();
+  const origin = screenToWorld(
+    rect.left + rect.width / 2,
+    rect.top + rect.height / 2
+  );
+
   if (correct) {
     score++;
     document.getElementById('score').textContent = score;
     card.classList.add('correct');
     updateDot(currentIndex, 'done-ok');
-    launchEmoji(['⭐','🌟','✨','🎉','👏','💫'][Math.floor(Math.random()*6)]);
-    if (score % 5 === 0 && score > 0) launchConfetti();
+    launchEmoji(['💖','💗','💕','✨','🎉','💫'][Math.floor(Math.random()*6)]);
+    spawnBurst(origin);
+    if (score % 5 === 0 && score > 0) spawnConfetti3D(origin);
   } else {
     card.classList.add('wrong');
     updateDot(currentIndex, 'done-fail');
     launchEmoji(['😅','💪','🔄','👀'][Math.floor(Math.random()*4)]);
+    dim(500);
   }
 
   setTimeout(() => {
@@ -141,9 +169,13 @@ function endGame() {
   if (pct === 1) {
     stars = '⭐⭐⭐⭐⭐'; title = '¡Perfecta, Roma! 🏆';
     launchConfetti(); setTimeout(launchConfetti, 600); setTimeout(launchConfetti, 1200);
+    const center = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+    spawnConfetti3D(center);
+    setTimeout(() => spawnConfetti3D(center), 600);
   } else if (pct >= 0.8) {
     stars = '⭐⭐⭐⭐'; title = '¡Qué bien lo hiciste! 🎉';
     launchConfetti();
+    spawnConfetti3D(screenToWorld(window.innerWidth / 2, window.innerHeight / 2));
   } else if (pct >= 0.6) {
     stars = '⭐⭐⭐'; title = '¡Muy bien, sigue así! 💪';
   } else if (pct >= 0.4) {
@@ -173,12 +205,14 @@ function endGame() {
   showScreen('result');
 }
 
-function restartGame() {
+export function restartGame() {
   startGame();
 }
 
-// Init
-buildBackground();
+window.startGame = startGame;
+window.restartGame = restartGame;
+
+// --- Init ---
 showScreen('start');
 
 (async () => {

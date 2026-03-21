@@ -24,36 +24,12 @@ body {
   position: relative;
 }
 
-/* Fondo con estrellas animadas */
-.stars {
+/* 3D Canvas */
+#bg3d {
   position: fixed;
   inset: 0;
-  pointer-events: none;
   z-index: 0;
-}
-.star {
-  position: absolute;
-  border-radius: 50%;
-  background: white;
-  animation: twinkle var(--d) ease-in-out infinite alternate;
-}
-@keyframes twinkle {
-  from { opacity: 0.1; transform: scale(0.8); }
-  to   { opacity: 1;   transform: scale(1.2); }
-}
-
-/* Burbujas flotantes de fondo */
-.bubble {
-  position: fixed;
-  border-radius: 50%;
-  opacity: 0.08;
-  animation: floatBubble var(--d) ease-in-out infinite alternate;
   pointer-events: none;
-  z-index: 0;
-}
-@keyframes floatBubble {
-  from { transform: translateY(0) rotate(0deg); }
-  to   { transform: translateY(-40px) rotate(20deg); }
 }
 
 /* Contenedor principal */
@@ -126,7 +102,7 @@ body {
   position: absolute;
   inset: -4px;
   border-radius: 44px;
-  background: linear-gradient(135deg, var(--pink), var(--cyan), var(--purple), var(--yellow));
+  background: linear-gradient(135deg, var(--pink), #FF1493, #FF69B4, var(--purple), var(--pink));
   z-index: -1;
   animation: borderSpin 3s linear infinite;
 }
@@ -169,12 +145,12 @@ body {
   80% { transform: translateX(10px); }
 }
 
-/* Colores de fondo de la tarjeta por índice */
-.card-bg-0 { background: linear-gradient(135deg, #2D1B55, #1e3a6e); }
-.card-bg-1 { background: linear-gradient(135deg, #2D1B55, #6e1e3a); }
-.card-bg-2 { background: linear-gradient(135deg, #2D1B55, #1e6e3a); }
-.card-bg-3 { background: linear-gradient(135deg, #2D1B55, #6e4a1e); }
-.card-bg-4 { background: linear-gradient(135deg, #2D1B55, #3a1e6e); }
+/* Colores de fondo de la tarjeta por índice (rosa dominante) */
+.card-bg-0 { background: linear-gradient(135deg, #3D1B55, #5e1e3a); }
+.card-bg-1 { background: linear-gradient(135deg, #4a1942, #6e1e3a); }
+.card-bg-2 { background: linear-gradient(135deg, #3D1B55, #4e1e4a); }
+.card-bg-3 { background: linear-gradient(135deg, #5a1e4a, #6e4a1e); }
+.card-bg-4 { background: linear-gradient(135deg, #4a1e5e, #3a1e6e); }
 
 /* Timer bar */
 .timer-wrap {
@@ -188,7 +164,7 @@ body {
 .timer-bar {
   height: 100%;
   border-radius: 20px;
-  background: linear-gradient(90deg, var(--green), var(--cyan), var(--yellow), var(--orange), var(--pink));
+  background: linear-gradient(90deg, var(--pink), #FF1493, var(--purple), var(--cyan), var(--pink));
   transition: width 0.3s linear, background 0.5s;
   width: 100%;
 }
